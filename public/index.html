@@ -117,8 +117,10 @@ async function api(path) {
     if (c && Date.now() - c.t < TTL) return c.d;
   } catch {}
   const res = await fetch("/api" + path);
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.error || res.status);
+  let data;
+  try { data = await res.json(); }
+  catch { throw new Error(`API route returned non-JSON (HTTP ${res.status}). The Netlify function isn't deployed or the /api redirect is missing: check netlify.toml is at the repo root.`); }
+  if (!res.ok) throw new Error(data.error || "HTTP " + res.status);
   try { localStorage.setItem(key, JSON.stringify({ t: Date.now(), d: data })); }
   catch { // storage full: drop old directory entries and retry once
     Object.keys(localStorage).filter(k => k.startsWith("dir:")).forEach(k => localStorage.removeItem(k));
@@ -220,11 +222,11 @@ async function home() {
   }
 
   const results = await Promise.all(specs.map(async ([title, fn, ranked]) => {
-    try { return { title, ranked, items: (await fn()).results }; } catch { return { title, items: [], err: true }; }
+    try { return { title, ranked, items: (await fn()).results }; } catch (e) { return { title, items: [], err: e.message }; }
   }));
   if (results.every((r) => r.err)) {
     app.className = "";
-    app.innerHTML = `<p class="err">Couldn't load. Check that TMDB_API_KEY is set in Netlify and redeploy.</p>`;
+    app.innerHTML = `<p class="err" style="padding:30px">Couldn't load: ${esc(results[0].err)}</p>`;
     return;
   }
   const pool = (results[0].items || []).filter((r) => r.backdrop).slice(0, 6);

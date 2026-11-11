@@ -115,7 +115,8 @@ async function browse(key, qs) {
 
 exports.handler = async (event) => {
   if (!process.env.TMDB_API_KEY) return json(500, { error: "TMDB_API_KEY not set" }, 0);
-  const parts = event.path.replace(/^.*\/tmdb\/?/, "").split("/").filter(Boolean);
+  // Netlify may pass either the original /api/... path or the rewritten function path.
+  const parts = event.path.replace(/^\/(?:\.netlify\/functions\/tmdb|api)\/?/, "").split("/").filter(Boolean);
   try {
     if (parts[0] === "search") {
       const q = (event.queryStringParameters?.q || "").trim();
