@@ -90,6 +90,11 @@
   header nav { display:flex; gap:6px; }
   header nav a { padding:6px 10px; border-radius:6px; cursor:pointer; color:var(--mute); }
   header nav a.on { color:#fff; font-weight:600; }
+  .play { background:#fff; color:#000; border:0; font-weight:700; border-radius:6px; padding:6px 14px; }
+  .play:hover { background:#ddd; border:0; }
+  .tile .play { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); width:46px; height:46px; border-radius:50%; padding:0; opacity:0; transition:opacity .18s; font-size:18px; }
+  .tile:hover .play { opacity:1; }
+  .ep .play { margin-top:6px; padding:3px 10px; font-size:12px; }
 </style>
 </head>
 <body>
@@ -102,6 +107,7 @@
 <main id="app"></main>
 <footer>This product uses the TMDB API but is not endorsed or certified by TMDB.</footer>
 
+<script src="player.js"></script>
 <script>
 const IMG = "https://image.tmdb.org/t/p/";
 const $ = (s) => document.querySelector(s);
@@ -171,7 +177,7 @@ function rowHTML(title, items, ranked) {
     <div class="rail">${items.map((r, i) => `<div class="tile" data-type="${r.type}" data-id="${r.id}" title="${esc(r.title)}">
       ${ranked ? `<span class="rk">${i + 1}</span>` : ""}
       ${r.poster ? `<img loading="lazy" src="${IMG}w342${r.poster}">` : `<div class="nm">${esc(r.title)}</div>`}
-      <div class="ov"><b>${esc(r.title)}</b><br>${esc(r.year)}${r.rating ? " · ★ " + r.rating.toFixed(1) : ""}</div></div>`).join("")}</div></div>`;
+      ${playBtn(r.type, r.id, r.title, null, null, "▶")}<div class="ov"><b>${esc(r.title)}</b><br>${esc(r.year)}${r.rating ? " · ★ " + r.rating.toFixed(1) : ""}</div></div>`).join("")}</div></div>`;
 }
 
 function trailerModal(d, type) {
@@ -238,7 +244,7 @@ async function home() {
       <h2>${esc(h.title)}</h2>
       <div class="hint" style="margin-bottom:8px">${esc(h.year)} · ${h.type === "tv" ? "Series" : "Film"}${h.rating ? " · ★ " + h.rating.toFixed(1) : ""}</div>
       <p>${esc(h.overview)}</p>
-      <button class="btn w" id="ptr">▶ Trailer</button><button class="btn g" id="inf">ⓘ More info</button></div>
+      ${playBtn(h.type, h.id, h.title, 1, 1, "▶ Play", "btn w")}<button class="btn g" id="ptr" style="margin-left:10px">Trailer</button><button class="btn g" id="inf">ⓘ More info</button></div>
       <div class="dots">${pool.map((_, i) => `<i class="${i === hi ? "on" : ""}" data-i="${i}"></i>`).join("")}</div></div>`;
   };
   const paint = () => {
@@ -311,6 +317,7 @@ function heroHTML(d, type, facts) {
         <div style="margin:10px 0">${(d.genres || []).map((g) => `<span class="tag">${esc(g.name)}</span>`).join("")}</div>
         <p>${esc(d.overview)}</p>
         <div class="links row">
+          ${type === "movie" ? playBtn("movie", d.id, title) : playBtn("tv", d.id, title, 1, 1)}
           ${trailer ? `<button id="ptr">▶ Trailer</button>` : ""}
           <a target="_blank" rel="noopener" href="https://www.themoviedb.org/${type}/${d.id}">TMDB</a>
           ${ext.imdb_id ? `<a target="_blank" rel="noopener" href="https://www.imdb.com/title/${ext.imdb_id}">IMDb</a>` : ""}
@@ -372,7 +379,7 @@ async function tvView(id) {
       ${(s.episodes || []).map((e) => `<div class="ep">
         ${e.still_path ? `<img loading="lazy" src="${IMG}w300${e.still_path}">` : `<div class="noimg"></div>`}
         <div><div class="n">S${String(e.season_number).padStart(2, "0")}E${String(e.episode_number).padStart(2, "0")} · ${esc(e.air_date || "TBA")}${e.runtime ? " · " + e.runtime + "m" : ""}${e.vote_average ? " · ★ " + e.vote_average.toFixed(1) : ""}</div>
-        <b>${esc(e.name)}</b><p>${esc(e.overview)}</p></div></div>`).join("")}
+        <b>${esc(e.name)}</b><p>${esc(e.overview)}</p>${playBtn("tv", d.id, d.name, e.season_number, e.episode_number)}</div></div>`).join("")}
     </details>`).join("");
     const sim = (d.similar?.results || []).slice(0, 12).map((r) => ({ id: r.id, type: "tv", title: r.name, year: (r.first_air_date || "").slice(0, 4), poster: r.poster_path }));
     app.innerHTML = heroHTML(d, "tv", facts) + provHTML(d) + castRow(d.credits) + `<h3>Seasons & episodes</h3>` + seasons +
@@ -381,6 +388,17 @@ async function tvView(id) {
     bindCards();
   } catch (e) { app.innerHTML = `<p class="err">${esc(e.message)}</p>`; }
 }
+
+// ---- play buttons: any element with data-play calls MYFLIX.onPlay (see player.js) ----
+document.addEventListener("click", (e) => {
+  const b = e.target.closest("[data-play]");
+  if (!b) return;
+  e.stopPropagation(); e.preventDefault();
+  const d = b.dataset;
+  MYFLIX.onPlay({ type: d.type, id: +d.id, title: d.title, ...(d.type === "tv" ? { season: +(d.season || 1), episode: +(d.episode || 1) } : {}) });
+}, true);
+const playBtn = (type, id, title, season, episode, label = "▶ Play", cls = "play") =>
+  `<button class="${cls}" data-play data-type="${type}" data-id="${id}" data-title="${esc(title)}"${season != null ? ` data-season="${season}" data-episode="${episode}"` : ""}>${label}</button>`;
 
 // ---- nav ----
 function markNav() { document.querySelectorAll("#nav a").forEach((a) => a.classList.toggle("on", a.dataset.tab === state.tab)); }
