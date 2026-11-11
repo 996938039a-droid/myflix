@@ -1,36 +1,115 @@
+
 // ---------------------------------------------------------------
-// Called whenever any Play button is clicked. You define what happens.
-//
-//   ctx = {
-//     type:    "movie" | "tv",
-//     id:      TMDB id (number),
-//     title:   "Title",
-//     season:  number   (tv only; 1 when played from a poster/hero)
-//     episode: number   (tv only; 1 when played from a poster/hero)
-//   }
-//
-// Use openPlayer(html) to show anything in a full-screen modal,
-// or navigate / fetch / do whatever you like here.
+// MYFLIX Player Configuration
+// Handles Play clicks for Movies, TV Shows and Anime.
 // ---------------------------------------------------------------
+
 window.MYFLIX = window.MYFLIX || {};
 
 MYFLIX.onPlay = function (ctx) {
-  // TODO: define what happens on click.
-  const label = ctx.type === "tv" ? `${ctx.title} S${ctx.season}E${ctx.episode}` : ctx.title;
-  openPlayer(`<div style="color:#fff;padding:40px;text-align:center">
-    <h3>Play: ${label}</h3>
-    <p style="color:#9a9aae">No player configured yet. Edit <code>public/player.js</code>.</p>
-    <pre style="color:#9a9aae">${JSON.stringify(ctx)}</pre></div>`);
+
+  // Encode title for URL (spaces become %20)
+  const encodedTitle = encodeURIComponent(ctx.title);
+
+  let embedUrl = "";
+
+  if (ctx.type === "movie") {
+
+    // Movie player
+    embedUrl =
+      `https://embed.vidrift.net/embed/movie/${ctx.id}` +
+      `?title=${encodedTitle}&brand=myflix-directory`;
+
+  } else if (ctx.type === "tv") {
+
+    // TV Series / Anime player
+    embedUrl =
+      `https://embed.vidrift.net/embed/tv/${ctx.id}/${ctx.season}/${ctx.episode}` +
+      `?title=${encodedTitle}&brand=myflix-directory`;
+
+  } else {
+    console.error("Unsupported media type:", ctx.type);
+    return;
+  }
+
+  // Display player in fullscreen modal
+  openPlayer(`
+    <div style="
+      position:relative;
+      width:100%;
+      padding-bottom:56.25%;
+      height:0;
+      background:#000;
+      overflow:hidden;
+    ">
+      <iframe
+        src="${embedUrl}"
+        style="
+          position:absolute;
+          inset:0;
+          width:100%;
+          height:100%;
+          border:0;
+        "
+        allowfullscreen
+        allow="autoplay; fullscreen"
+        referrerpolicy="origin"
+      ></iframe>
+    </div>
+  `);
 };
 
-// Helper: shows HTML inside a 16:9 modal. Click outside or press Esc to close.
+
+// ---------------------------------------------------------------
+// Player Modal
+// ---------------------------------------------------------------
+
 function openPlayer(html) {
+
   closePlayer();
-  const m = document.createElement("div");
-  m.className = "modal"; m.id = "playermodal";
-  m.innerHTML = `<div class="box" style="display:flex;align-items:center;justify-content:center"><button class="x">Close ✕</button>${html}</div>`;
-  m.onclick = (e) => { if (e.target === m || e.target.className === "x") closePlayer(); };
-  document.body.appendChild(m);
+
+  const modal = document.createElement("div");
+
+  modal.className = "modal";
+  modal.id = "playermodal";
+
+  modal.innerHTML = `
+    <div class="box" style="
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      position:relative;
+      width:90%;
+      max-width:1100px;
+      background:#000;
+      overflow:hidden;
+    ">
+      <button class="x" aria-label="Close player">✕</button>
+      ${html}
+    </div>
+  `;
+
+  modal.onclick = (e) => {
+    if (e.target === modal || e.target.classList.contains("x")) {
+      closePlayer();
+    }
+  };
+
+  document.body.appendChild(modal);
 }
-function closePlayer() { document.getElementById("playermodal")?.remove(); }
-addEventListener("keydown", (e) => { if (e.key === "Escape") closePlayer(); });
+
+
+// ---------------------------------------------------------------
+// Close Player
+// ---------------------------------------------------------------
+
+function closePlayer() {
+  document.getElementById("playermodal")?.remove();
+}
+
+
+// Close on Escape key
+
+addEventListener("keydown", (e) => {
+  if (e.key === "Escape") closePlayer();
+});
