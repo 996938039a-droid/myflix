@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MyFlix</title>
+<style>
+  :root { --bg:#0b0b0f; --panel:#15151c; --line:#262633; --text:#ececf1; --mute:#9a9aae; --accent:#e50914; }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--text); font:15px/1.5 system-ui,-apple-system,Segoe UI,Roboto,sans-serif; }
+  header { position:sticky; top:0; z-index:5; display:flex; gap:12px; align-items:center; padding:14px 24px; background:rgba(11,11,15,.92); backdrop-filter:blur(8px); border-bottom:1px solid var(--line); }
+  header h1 { margin:0; font-size:18px; color:var(--accent); cursor:pointer; white-space:nowrap; }
+  #q { flex:1; max-width:520px; padding:10px 14px; border-radius:8px; border:1px solid var(--line); background:var(--panel); color:var(--text); font-size:15px; }
+  #q:focus { outline:2px solid var(--accent); }
+  main { padding:24px; max-width:1200px; margin:0 auto; }
+  .hint { color:var(--mute); }
+  .grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:16px; }
+  .card { cursor:pointer; background:var(--panel); border-radius:8px; overflow:hidden; border:1px solid var(--line); transition:transform .15s; }
+  .card:hover { transform:translateY(-3px); border-color:var(--accent); }
+  .card img, .card .noimg { width:100%; aspect-ratio:2/3; object-fit:cover; display:block; background:#1d1d27; }
+  .card .noimg { display:flex; align-items:center; justify-content:center; color:var(--mute); padding:8px; text-align:center; }
+  .card .meta { padding:8px 10px; }
+  .card .t { font-weight:600; font-size:13px; }
+  .card .s { color:var(--mute); font-size:12px; }
+  .badge { display:inline-block; font-size:10px; padding:1px 6px; border-radius:4px; background:var(--line); margin-left:4px; text-transform:uppercase; }
+  .hero { position:relative; border-radius:12px; overflow:hidden; background:var(--panel); border:1px solid var(--line); }
+  .hero .bd { height:320px; background-size:cover; background-position:center top; opacity:.35; }
+  .hero .body { display:flex; gap:24px; padding:0 24px 24px; margin-top:-200px; position:relative; flex-wrap:wrap; }
+  .hero img.poster { width:200px; border-radius:8px; box-shadow:0 8px 30px #000a; align-self:flex-start; }
+  .hero .info { flex:1; min-width:260px; padding-top:110px; }
+  .hero h2 { margin:0 0 4px; font-size:30px; }
+  .tag { display:inline-block; padding:2px 10px; margin:0 6px 6px 0; border-radius:99px; background:var(--line); font-size:12px; }
+  .facts { display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:10px; margin:16px 0; }
+  .facts div { background:var(--panel); border:1px solid var(--line); border-radius:8px; padding:10px 12px; }
+  .facts b { display:block; color:var(--mute); font-size:11px; text-transform:uppercase; letter-spacing:.05em; }
+  h3 { margin:28px 0 10px; }
+  .cast { display:flex; gap:12px; overflow-x:auto; padding-bottom:8px; }
+  .cast .p { flex:0 0 100px; font-size:12px; }
+  .cast img, .cast .noimg { width:100px; height:150px; object-fit:cover; border-radius:6px; background:#1d1d27; display:block; }
+  details.season { background:var(--panel); border:1px solid var(--line); border-radius:8px; margin-bottom:10px; }
+  details.season > summary { cursor:pointer; padding:12px 14px; font-weight:600; display:flex; gap:12px; align-items:center; }
+  details.season > summary img { width:40px; border-radius:4px; }
+  .ep { display:flex; gap:12px; padding:10px 14px; border-top:1px solid var(--line); }
+  .ep img, .ep .noimg { width:140px; aspect-ratio:16/9; object-fit:cover; border-radius:6px; background:#1d1d27; flex:0 0 auto; }
+  .ep .n { color:var(--mute); font-size:12px; }
+  .ep p { margin:4px 0 0; color:var(--mute); font-size:13px; }
+  .links a { color:var(--text); margin-right:12px; }
+  .row { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+  button { background:var(--panel); color:var(--text); border:1px solid var(--line); padding:6px 12px; border-radius:6px; cursor:pointer; }
+  button:hover { border-color:var(--accent); }
+  .err { color:#ff7b7b; }
+  footer { color:var(--mute); font-size:12px; text-align:center; padding:30px; }
+
+  /* netflix-style home */
+  .bigmain { max-width:none; padding:0; }
+  .feature { position:relative; height:min(78vh,640px); background-size:cover; background-position:center 20%; display:flex; align-items:flex-end; }
+  .feature::before { content:""; position:absolute; inset:0; background:linear-gradient(90deg,rgba(11,11,15,.95) 0%,rgba(11,11,15,.4) 55%,transparent 100%),linear-gradient(0deg,var(--bg) 0%,transparent 40%); }
+  .feature .in { position:relative; padding:0 4% 90px; max-width:640px; }
+  .feature h2 { font-size:clamp(28px,5vw,54px); margin:0 0 10px; text-shadow:0 2px 12px #000; }
+  .feature p { color:#d8d8e2; display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden; }
+  .btn { display:inline-flex; align-items:center; gap:8px; padding:10px 22px; border-radius:6px; font-weight:700; font-size:16px; border:0; cursor:pointer; }
+  .btn.w { background:#fff; color:#000; } .btn.g { background:rgba(120,120,135,.6); color:#fff; margin-left:10px; }
+  .dots { position:absolute; right:4%; bottom:100px; display:flex; gap:6px; }
+  .dots i { width:22px; height:3px; background:#fff5; cursor:pointer; } .dots i.on { background:#fff; }
+  .rows { margin-top:-70px; position:relative; padding:0 0 40px; }
+  .rowwrap { margin:0 0 26px; position:relative; }
+  .rowwrap h4 { margin:0 4% 8px; font-size:19px; }
+  .rail { display:flex; gap:8px; overflow-x:auto; scroll-behavior:smooth; padding:6px 4%; scrollbar-width:none; }
+  .rail::-webkit-scrollbar { display:none; }
+  .tile { flex:0 0 auto; width:clamp(120px,14vw,190px); cursor:pointer; position:relative; border-radius:6px; overflow:hidden; transition:transform .18s, box-shadow .18s; background:#1d1d27; }
+  .tile:hover { transform:scale(1.08); z-index:3; box-shadow:0 10px 30px #000c; }
+  .tile img { width:100%; aspect-ratio:2/3; object-fit:cover; display:block; }
+  .tile .nm { padding:8px; font-size:12px; text-align:center; aspect-ratio:2/3; display:flex; align-items:center; justify-content:center; }
+  .tile .ov { position:absolute; left:0; right:0; bottom:0; padding:24px 8px 8px; background:linear-gradient(transparent,#000d); font-size:12px; opacity:0; transition:opacity .18s; }
+  .tile:hover .ov { opacity:1; }
+  .tile .rk { position:absolute; top:6px; left:6px; background:var(--accent); font-weight:800; font-size:12px; padding:1px 7px; border-radius:3px; }
+  .arrow { position:absolute; top:34px; bottom:6px; width:4%; z-index:4; background:rgba(0,0,0,.55); border:0; color:#fff; font-size:26px; opacity:0; border-radius:0; }
+  .rowwrap:hover .arrow { opacity:1; } .arrow.l { left:0; } .arrow.r { right:0; }
+  .chips { display:flex; gap:8px; padding:14px 4% 0; overflow-x:auto; position:relative; z-index:2; scrollbar-width:none; }
+  .chip { padding:5px 14px; border-radius:99px; border:1px solid var(--line); background:rgba(21,21,28,.85); cursor:pointer; white-space:nowrap; font-size:13px; }
+  .chip.on { background:#fff; color:#000; border-color:#fff; }
+  select { background:var(--panel); color:var(--text); border:1px solid var(--line); border-radius:6px; padding:8px; }
+  .modal { position:fixed; inset:0; background:#000d; z-index:20; display:flex; align-items:center; justify-content:center; padding:20px; }
+  .modal .box { width:min(960px,100%); aspect-ratio:16/9; background:#000; position:relative; }
+  .modal iframe { width:100%; height:100%; border:0; }
+  .modal .x { position:absolute; top:-40px; right:0; }
+  .prov { display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+  .prov img { width:44px; height:44px; border-radius:8px; }
+  .tabs { display:flex; gap:6px; }
+  header nav { display:flex; gap:6px; }
+  header nav a { padding:6px 10px; border-radius:6px; cursor:pointer; color:var(--mute); }
+  header nav a.on { color:#fff; font-weight:600; }
+</style>
+</head>
+<body>
+<header>
+  <h1 id="home">MYFLIX</h1>
+  <nav id="nav"><a data-tab="all">Home</a><a data-tab="tv">Series</a><a data-tab="movie">Films</a><a data-tab="lib">My Library</a></nav>
+  <input id="q" placeholder="Search a film or series…" autocomplete="off">
+  <select id="region" title="Region for availability"></select>
+</header>
+<main id="app"></main>
+<footer>This product uses the TMDB API but is not endorsed or certified by TMDB.</footer>
+
+<script>
+const IMG = "https://image.tmdb.org/t/p/";
+const $ = (s) => document.querySelector(s);
+const app = $("#app");
+const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;" }[c]));
+
+// ---- local cache: lookups already made are stored in this browser and reused ----
+const TTL = 7 * 24 * 3600 * 1000;
+async function api(path) {
+  const key = "dir:" + path;
+  try {
+    const c = JSON.parse(localStorage.getItem(key) || "null");
+    if (c && Date.now() - c.t < TTL) return c.d;
+  } catch {}
+  const res = await fetch("/api" + path);
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || res.status);
+  try { localStorage.setItem(key, JSON.stringify({ t: Date.now(), d: data })); }
+  catch { // storage full: drop old directory entries and retry once
+    Object.keys(localStorage).filter(k => k.startsWith("dir:")).forEach(k => localStorage.removeItem(k));
+    try { localStorage.setItem(key, JSON.stringify({ t: Date.now(), d: data })); } catch {}
+  }
+  return data;
+}
+
+// remembers every title you've opened so the home page is your own library
+function remember(item) {
+  const lib = JSON.parse(localStorage.getItem("lib") || "{}");
+  lib[item.type + item.id] = item;
+  localStorage.setItem("lib", JSON.stringify(lib));
+}
+
+function card(r) {
+  const img = r.poster ? `<img loading="lazy" src="${IMG}w342${r.poster}">` : `<div class="noimg">${esc(r.title)}</div>`;
+  return `<div class="card" data-type="${r.type}" data-id="${r.id}">${img}
+    <div class="meta"><div class="t">${esc(r.title)}</div>
+    <div class="s">${esc(r.year)}<span class="badge">${r.type === "tv" ? "series" : "film"}</span></div></div></div>`;
+}
+function bindCards() {
+  app.querySelectorAll(".card").forEach((el) => el.onclick = () => go(`#/${el.dataset.type}/${el.dataset.id}`));
+}
+function go(h) { location.hash = h; }
+
+// ---- views ----
+// ---- Netflix-style home ----
+const REGIONS = { IN:"India", US:"United States", GB:"United Kingdom", CA:"Canada", AU:"Australia", DE:"Germany", FR:"France", JP:"Japan", BR:"Brazil", AE:"UAE" };
+const PROVIDERS = [["","All"],["8","Netflix"],["119","Prime Video"],["122","Disney+ Hotstar"],["337","Disney+"],["350","Apple TV+"],["1899","Max"],["15","Hulu"]];
+const GENRES = {
+  movie: [[28,"Action"],[35,"Comedy"],[18,"Drama"],[27,"Horror"],[878,"Sci-Fi"],[53,"Thriller"],[10749,"Romance"],[16,"Animation"],[99,"Documentary"]],
+  tv:    [[10759,"Action & Adventure"],[35,"Comedy"],[18,"Drama"],[80,"Crime"],[10765,"Sci-Fi & Fantasy"],[9648,"Mystery"],[99,"Documentary"],[10764,"Reality"]],
+};
+const state = { tab: localStorage.getItem("tab") || "all", region: localStorage.getItem("region") || "IN", provider: localStorage.getItem("provider") || "" };
+$("#region").innerHTML = Object.entries(REGIONS).map(([k, v]) => `<option value="${k}">${v}</option>`).join("");
+$("#region").value = state.region;
+$("#region").onchange = (e) => { state.region = e.target.value; localStorage.setItem("region", state.region); route(); };
+
+const qs = (o) => Object.entries(o).filter(([, v]) => v !== "" && v != null).map(([k, v]) => `${k}=${encodeURIComponent(v)}`).join("&");
+const browseRow = (key, extra = {}) => api(`/browse/${key}?` + qs({ region: state.region, provider: state.provider, ...extra }));
+let heroTimer;
+
+function rowHTML(title, items, ranked) {
+  if (!items.length) return "";
+  return `<div class="rowwrap"><h4>${esc(title)}</h4>
+    <button class="arrow l">‹</button><button class="arrow r">›</button>
+    <div class="rail">${items.map((r, i) => `<div class="tile" data-type="${r.type}" data-id="${r.id}" title="${esc(r.title)}">
+      ${ranked ? `<span class="rk">${i + 1}</span>` : ""}
+      ${r.poster ? `<img loading="lazy" src="${IMG}w342${r.poster}">` : `<div class="nm">${esc(r.title)}</div>`}
+      <div class="ov"><b>${esc(r.title)}</b><br>${esc(r.year)}${r.rating ? " · ★ " + r.rating.toFixed(1) : ""}</div></div>`).join("")}</div></div>`;
+}
+
+function trailerModal(d, type) {
+  const v = (d.videos?.results || []).filter((x) => x.site === "YouTube");
+  const t = v.find((x) => x.type === "Trailer") || v[0];
+  if (!t) return alert("No trailer available for this title.");
+  const m = document.createElement("div");
+  m.className = "modal";
+  m.innerHTML = `<div class="box"><button class="x">Close ✕</button>
+    <iframe src="https://www.youtube-nocookie.com/embed/${t.key}?autoplay=1&rel=0" allow="autoplay; encrypted-media; fullscreen" allowfullscreen></iframe></div>`;
+  m.onclick = (e) => { if (e.target === m || e.target.className === "x") m.remove(); };
+  document.body.appendChild(m);
+}
+async function playTrailer(type, id) {
+  try { trailerModal(await api(`/${type}/${id}`), type); } catch (e) { alert(e.message); }
+}
+
+async function home() {
+  clearInterval(heroTimer);
+  const tab = state.tab;
+  app.className = "bigmain";
+  app.innerHTML = `<p class="hint" style="padding:30px">Loading…</p>`;
+  const T = tab === "tv" ? "tv" : "movie";
+  const specs = tab === "lib" ? [] : tab === "all" ? [
+    ["Trending now", () => browseRow(state.provider ? "popular_movie" : "trending_all"), true],
+    ["Trending films", () => browseRow("trending_movie")],
+    ["Trending series", () => browseRow("trending_tv")],
+    ["Popular series", () => browseRow("popular_tv")],
+    ["New releases", () => browseRow("new_movie")],
+    ["New & airing series", () => browseRow("new_tv")],
+    ["Top rated films", () => browseRow("top_movie")],
+    ["Top rated series", () => browseRow("top_tv")],
+    ["Anime", () => browseRow("anime")],
+  ] : [
+    [`Trending ${T === "tv" ? "series" : "films"}`, () => browseRow("trending_" + T), true],
+    [`Popular`, () => browseRow("popular_" + T)],
+    [`New`, () => browseRow("new_" + T)],
+    [`Top rated`, () => browseRow("top_" + T)],
+    ...GENRES[T].map(([id, n]) => [n, () => browseRow("genre_" + T, { genre: id })]),
+  ];
+  const chips = `<div class="chips">${PROVIDERS.map(([id, n]) => `<span class="chip ${state.provider === id ? "on" : ""}" data-p="${id}">${n}</span>`).join("")}</div>`;
+
+  if (tab === "lib") {
+    const lib = Object.values(JSON.parse(localStorage.getItem("lib") || "{}")).reverse();
+    app.className = "";
+    app.innerHTML = `<h3 style="margin-top:0">My Library</h3>` + (lib.length ? `<div class="grid">${lib.map(card).join("")}</div>` : `<p class="hint">Titles you open appear here.</p>`);
+    return bindCards();
+  }
+
+  const results = await Promise.all(specs.map(async ([title, fn, ranked]) => {
+    try { return { title, ranked, items: (await fn()).results }; } catch { return { title, items: [], err: true }; }
+  }));
+  if (results.every((r) => r.err)) {
+    app.className = "";
+    app.innerHTML = `<p class="err">Couldn't load. Check that TMDB_API_KEY is set in Netlify and redeploy.</p>`;
+    return;
+  }
+  const pool = (results[0].items || []).filter((r) => r.backdrop).slice(0, 6);
+  let hi = 0;
+  const heroEl = () => {
+    const h = pool[hi];
+    if (!h) return "";
+    return `<div class="feature" id="feat" style="background-image:url(${IMG}original${h.backdrop})"><div class="in">
+      <h2>${esc(h.title)}</h2>
+      <div class="hint" style="margin-bottom:8px">${esc(h.year)} · ${h.type === "tv" ? "Series" : "Film"}${h.rating ? " · ★ " + h.rating.toFixed(1) : ""}</div>
+      <p>${esc(h.overview)}</p>
+      <button class="btn w" id="ptr">▶ Trailer</button><button class="btn g" id="inf">ⓘ More info</button></div>
+      <div class="dots">${pool.map((_, i) => `<i class="${i === hi ? "on" : ""}" data-i="${i}"></i>`).join("")}</div></div>`;
+  };
+  const paint = () => {
+    app.innerHTML = chips + `<div id="heroslot">${heroEl()}</div>` +
+      `<div class="rows">${results.map((r) => rowHTML(r.title, r.items, r.ranked)).join("")}</div>`;
+    bindHome();
+  };
+  const bindHome = () => {
+    app.querySelectorAll(".chip").forEach((c) => c.onclick = () => { state.provider = c.dataset.p; localStorage.setItem("provider", state.provider); home(); });
+    app.querySelectorAll(".tile").forEach((el) => el.onclick = () => go(`#/${el.dataset.type}/${el.dataset.id}`));
+    app.querySelectorAll(".rowwrap").forEach((w) => {
+      const rail = w.querySelector(".rail");
+      w.querySelector(".l").onclick = () => rail.scrollBy({ left: -rail.clientWidth * .85 });
+      w.querySelector(".r").onclick = () => rail.scrollBy({ left: rail.clientWidth * .85 });
+    });
+    bindHero();
+  };
+  const bindHero = () => {
+    const h = pool[hi]; if (!h) return;
+    $("#ptr").onclick = () => playTrailer(h.type, h.id);
+    $("#inf").onclick = () => go(`#/${h.type}/${h.id}`);
+    app.querySelectorAll(".dots i").forEach((d) => d.onclick = () => { hi = +d.dataset.i; swap(); });
+  };
+  const swap = () => { $("#heroslot").innerHTML = heroEl(); bindHero(); };
+  paint();
+  if (pool.length > 1) heroTimer = setInterval(() => { hi = (hi + 1) % pool.length; if ($("#heroslot")) swap(); else clearInterval(heroTimer); }, 9000);
+}
+
+async function searchView(q) {
+  app.className = ""; clearInterval(heroTimer);
+  app.innerHTML = `<p class="hint">Searching…</p>`;
+  try {
+    const { results } = await api("/search?q=" + encodeURIComponent(q));
+    app.innerHTML = results.length
+      ? `<div class="grid">${results.map(card).join("")}</div>` : `<p class="hint">No results for “${esc(q)}”.</p>`;
+    bindCards();
+  } catch (e) { app.innerHTML = `<p class="err">${esc(e.message)}</p>`; }
+}
+
+const money = (n) => n ? "$" + n.toLocaleString() : "—";
+const people = (arr, n = 3) => (arr || []).slice(0, n).map((p) => esc(p.name)).join(", ") || "—";
+
+function castRow(credits) {
+  const cast = (credits?.cast || []).slice(0, 20);
+  if (!cast.length) return "";
+  return `<h3>Cast</h3><div class="cast">${cast.map((p) => `<div class="p">
+    ${p.profile_path ? `<img loading="lazy" src="${IMG}w185${p.profile_path}">` : `<div class="noimg"></div>`}
+    <b>${esc(p.name)}</b><br><span class="hint">${esc(p.character)}</span></div>`).join("")}</div>`;
+}
+
+function provHTML(d) {
+  const r = d["watch/providers"]?.results?.[state.region];
+  if (!r) return `<h3>Where to watch (${esc(REGIONS[state.region] || state.region)})</h3><p class="hint">No streaming data for this region.</p>`;
+  const grp = (label, arr) => arr?.length ? `<div style="margin-bottom:10px"><div class="hint" style="margin-bottom:6px">${label}</div><div class="prov">${arr.map((p) => `<img title="${esc(p.provider_name)}" src="${IMG}w92${p.logo_path}">`).join("")}</div></div>` : "";
+  return `<h3>Where to watch (${esc(REGIONS[state.region] || state.region)})</h3>` + (grp("Stream", r.flatrate) + grp("Rent", r.rent) + grp("Buy", r.buy) || `<p class="hint">Not currently listed.</p>`) +
+    (r.link ? `<a class="hint" target="_blank" rel="noopener" href="${esc(r.link)}">Full availability on TMDB / JustWatch</a>` : "");
+}
+function heroHTML(d, type, facts) {
+  const title = d.title || d.name;
+  const year = (d.release_date || d.first_air_date || "").slice(0, 4);
+  const trailer = (d.videos?.results || []).find((v) => v.site === "YouTube" && v.type === "Trailer");
+  const ext = d.external_ids || {};
+  return `<div class="hero">
+    <div class="bd" style="background-image:url(${d.backdrop_path ? IMG + "w1280" + d.backdrop_path : ""})"></div>
+    <div class="body">
+      ${d.poster_path ? `<img class="poster" src="${IMG}w500${d.poster_path}">` : ""}
+      <div class="info">
+        <h2>${esc(title)} <span class="hint">(${esc(year)})</span></h2>
+        ${d.tagline ? `<div class="hint"><i>${esc(d.tagline)}</i></div>` : ""}
+        <div style="margin:10px 0">${(d.genres || []).map((g) => `<span class="tag">${esc(g.name)}</span>`).join("")}</div>
+        <p>${esc(d.overview)}</p>
+        <div class="links row">
+          ${trailer ? `<button id="ptr">▶ Trailer</button>` : ""}
+          <a target="_blank" rel="noopener" href="https://www.themoviedb.org/${type}/${d.id}">TMDB</a>
+          ${ext.imdb_id ? `<a target="_blank" rel="noopener" href="https://www.imdb.com/title/${ext.imdb_id}">IMDb</a>` : ""}
+          <button id="raw">View JSON</button>
+        </div>
+      </div>
+    </div></div>
+    <div class="facts">${facts.map(([k, v]) => `<div><b>${k}</b>${v}</div>`).join("")}</div>`;
+}
+
+function showRaw(d) {
+  const w = window.open("", "_blank");
+  w.document.write("<pre style='white-space:pre-wrap'>" + esc(JSON.stringify(d, null, 2)) + "</pre>");
+}
+
+async function movieView(id) {
+  app.className = ""; clearInterval(heroTimer);
+  app.innerHTML = `<p class="hint">Loading…</p>`;
+  try {
+    const d = await api("/movie/" + id);
+    remember({ id: d.id, type: "movie", title: d.title, year: (d.release_date || "").slice(0, 4), poster: d.poster_path });
+    const crew = d.credits?.crew || [];
+    const facts = [
+      ["TMDB ID", d.id], ["IMDb ID", esc(d.external_ids?.imdb_id || "—")],
+      ["Runtime", d.runtime ? `${d.runtime} min` : "—"], ["Released", esc(d.release_date || "—")],
+      ["Rating", d.vote_average ? `${d.vote_average.toFixed(1)} (${d.vote_count} votes)` : "—"],
+      ["Director", people(crew.filter((c) => c.job === "Director"))],
+      ["Writers", people(crew.filter((c) => c.department === "Writing"))],
+      ["Budget", money(d.budget)], ["Revenue", money(d.revenue)],
+      ["Language", esc(d.original_language)], ["Status", esc(d.status)],
+      ["Studios", people(d.production_companies, 4)],
+    ];
+    const sim = (d.similar?.results || []).slice(0, 12).map((r) => ({ id: r.id, type: "movie", title: r.title, year: (r.release_date || "").slice(0, 4), poster: r.poster_path }));
+    app.innerHTML = heroHTML(d, "movie", facts) + provHTML(d) + castRow(d.credits) +
+      (sim.length ? `<h3>Similar</h3><div class="grid">${sim.map(card).join("")}</div>` : "");
+    $("#raw").onclick = () => showRaw(d); if ($("#ptr")) $("#ptr").onclick = () => trailerModal(d);
+    bindCards();
+  } catch (e) { app.innerHTML = `<p class="err">${esc(e.message)}</p>`; }
+}
+
+async function tvView(id) {
+  app.className = ""; clearInterval(heroTimer);
+  app.innerHTML = `<p class="hint">Loading series and all episodes…</p>`;
+  try {
+    const d = await api("/tv/" + id);
+    remember({ id: d.id, type: "tv", title: d.name, year: (d.first_air_date || "").slice(0, 4), poster: d.poster_path });
+    const eps = d.seasons_full.reduce((n, s) => n + (s.episodes?.length || 0), 0);
+    const facts = [
+      ["TMDB ID", d.id], ["IMDb ID", esc(d.external_ids?.imdb_id || "—")],
+      ["Seasons", d.number_of_seasons], ["Episodes", d.number_of_episodes || eps],
+      ["First aired", esc(d.first_air_date || "—")], ["Last aired", esc(d.last_air_date || "—")],
+      ["Status", esc(d.status)], ["Rating", d.vote_average ? `${d.vote_average.toFixed(1)} (${d.vote_count} votes)` : "—"],
+      ["Created by", people(d.created_by)], ["Networks", people(d.networks, 3)],
+      ["Language", esc(d.original_language)],
+    ];
+    const seasons = d.seasons_full.map((s) => `<details class="season">
+      <summary>${s.poster_path ? `<img src="${IMG}w92${s.poster_path}">` : ""}
+        <span>${esc(s.name)} <span class="hint">· ${s.episodes?.length || 0} episodes · ${esc((s.air_date || "").slice(0, 4))}</span></span></summary>
+      ${(s.episodes || []).map((e) => `<div class="ep">
+        ${e.still_path ? `<img loading="lazy" src="${IMG}w300${e.still_path}">` : `<div class="noimg"></div>`}
+        <div><div class="n">S${String(e.season_number).padStart(2, "0")}E${String(e.episode_number).padStart(2, "0")} · ${esc(e.air_date || "TBA")}${e.runtime ? " · " + e.runtime + "m" : ""}${e.vote_average ? " · ★ " + e.vote_average.toFixed(1) : ""}</div>
+        <b>${esc(e.name)}</b><p>${esc(e.overview)}</p></div></div>`).join("")}
+    </details>`).join("");
+    const sim = (d.similar?.results || []).slice(0, 12).map((r) => ({ id: r.id, type: "tv", title: r.name, year: (r.first_air_date || "").slice(0, 4), poster: r.poster_path }));
+    app.innerHTML = heroHTML(d, "tv", facts) + provHTML(d) + castRow(d.credits) + `<h3>Seasons & episodes</h3>` + seasons +
+      (sim.length ? `<h3>Similar</h3><div class="grid">${sim.map(card).join("")}</div>` : "");
+    $("#raw").onclick = () => showRaw(d); if ($("#ptr")) $("#ptr").onclick = () => trailerModal(d);
+    bindCards();
+  } catch (e) { app.innerHTML = `<p class="err">${esc(e.message)}</p>`; }
+}
+
+// ---- nav ----
+function markNav() { document.querySelectorAll("#nav a").forEach((a) => a.classList.toggle("on", a.dataset.tab === state.tab)); }
+document.querySelectorAll("#nav a").forEach((a) => a.onclick = () => { state.tab = a.dataset.tab; localStorage.setItem("tab", state.tab); $("#q").value = ""; markNav(); if (location.hash && location.hash !== "#/") go("#/"); else route(); });
+markNav();
+
+// ---- router ----
+function route() {
+  const h = location.hash;
+  let m;
+  if ((m = h.match(/^#\/search\/(.+)$/))) { $("#q").value = decodeURIComponent(m[1]); searchView(decodeURIComponent(m[1])); }
+  else if ((m = h.match(/^#\/movie\/(\d+)$/))) movieView(m[1]);
+  else if ((m = h.match(/^#\/tv\/(\d+)$/))) tvView(m[1]);
+  else home();
+}
+let t;
+$("#q").addEventListener("input", (e) => {
+  clearTimeout(t);
+  const v = e.target.value.trim();
+  t = setTimeout(() => v ? go("#/search/" + encodeURIComponent(v)) : go("#/"), 350);
+});
+$("#home").onclick = () => { $("#q").value = ""; go("#/"); };
+addEventListener("hashchange", route);
+route();
+</script>
+</body>
+</html>
